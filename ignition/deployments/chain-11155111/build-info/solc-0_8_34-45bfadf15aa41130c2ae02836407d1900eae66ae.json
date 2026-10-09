@@ -1,0 +1,49 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_34-45bfadf15aa41130c2ae02836407d1900eae66ae",
+  "solcVersion": "0.8.34",
+  "solcLongVersion": "0.8.34+commit.80d5c536",
+  "compilerType": "solc",
+  "toolVersions": {
+    "hardhat": "3.17.0"
+  },
+  "userSourceNameMap": {
+    "contracts/TrazabilidadCafe.sol": "project/contracts/TrazabilidadCafe.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "osaka",
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode.linkReferences",
+            "evm.bytecode.object",
+            "evm.bytecode.opcodes",
+            "evm.bytecode.sourceMap",
+            "evm.deployedBytecode.immutableReferences",
+            "evm.deployedBytecode.linkReferences",
+            "evm.deployedBytecode.object",
+            "evm.deployedBytecode.opcodes",
+            "evm.deployedBytecode.sourceMap",
+            "evm.methodIdentifiers"
+          ]
+        }
+      },
+      "remappings": []
+    },
+    "sources": {
+      "project/contracts/TrazabilidadCafe.sol": {
+        "content": "// SPDX-License-Identifier: MIT\n\npragma solidity ^0.8.28;\n\n/// @title TrazabilidadCafe\n/// @notice Registra el recorrido de un lote de café desde la cosecha hasta la distribución, incluyendo actores, etapas y documentos asociados.\ncontract TrazabilidadCafe {\n    // ─── Tipos ──────────────────────────────────────────────\n    enum Rol {\n        Ninguno,\n        Productor,\n        Procesador,\n        Transportista,\n        Tostador,\n        Distribuidor\n    }\n\n// Etapas de producción del café, cada una asociada a un rol específico\n    enum Etapa {\n        Cosechado,    // Registra el Productor al momento de cocehar el café\n        Beneficiado,  // el Procesador (lavado, secado, trillado)\n        Transportado, // el Transportista\n        Tostado,      // el Tostador\n        Distribuido   // el Distribuidor\n    }\n\n    struct Lote {\n        uint256 id;             // IDentificador único del lote\n        string origen;          // Lugar de origen del café (ej. finca, región) \n        address productor;      // Dirección de billetera del productor que creó el lote\n        address custodio;       // Dirección de billetera del actor que actualmente tiene la custodia del lote\n        Etapa etapa;            // Etapa actual del lote en la cadena de producción\n        uint64 fechaCreacion;   // Fecha de creación del lote (timestamp)    \n    }\n\n    struct Registro {\n        Etapa etapa;            // Etapa registrada\n        address actor;          // Dirección de billetera del actor que registra la etapa\n        uint64 fecha;           // Fecha de registro (timestamp)\n        string detalle;         // Glosa o descripción de la etapa (ej. \"Café lavado y secado\")\n    }\n\n    address public admin;       // Dirección de billetera del administrador del contrato\n    uint256 public totalLotes;  // Cantidad total de lotes registrados en el contrato\n\n    mapping(address => Rol) public roles;               // Arreglo de todos los actores registrados y sus roles\n    mapping(uint256 => Lote) private lotes;             // Arreglo de todos los lotes registrados, indexados por su ID\n    mapping(uint256 => Registro[]) private historial;   // Arreglo de registros de cada lote, indexados por el ID del lote\n\n    // Eventos \n    event ActorRegistrado(address indexed actor, Rol rol);\n    event LoteCreado(uint256 indexed idLote, address indexed productor, string origen);\n    event EtapaRegistrada(uint256 indexed idLote, Etapa etapa, address indexed actor);\n    event CustodiaTransferida(uint256 indexed idLote, address indexed de, address indexed para);\n\n    // Errores \n    error NoEsAdmin();\n    error RolIncorrecto(Rol requerido, Rol actual);\n    error NoEsCustodio(uint256 idLote);\n    error LoteInexistente(uint256 idLote);\n    error LoteFinalizado(uint256 idLote);\n    error DireccionInvalida();\n\n    // Modificadores\n    modifier soloAdmin() {\n        if (msg.sender != admin) revert NoEsAdmin();\n        _;\n    }\n\n    modifier loteExiste(uint256 idLote) {\n        if (idLote == 0 || idLote > totalLotes) revert LoteInexistente(idLote);\n        _;\n    }\n\n    modifier soloCustodio(uint256 idLote) {\n        if (lotes[idLote].custodio != msg.sender) revert NoEsCustodio(idLote);\n        _;\n    }\n\n    constructor() {\n        admin = msg.sender;\n    }\n\n    // Administración de actores\n    function registrarActor(address actor, Rol rol) external soloAdmin {\n        if (actor == address(0)) revert DireccionInvalida();\n        roles[actor] = rol;\n        emit ActorRegistrado(actor, rol);\n    }\n\n    // Productor: crear lote. En este diseño crea el productor y el mismo es el custodio inicial.\n    function crearLote(string calldata origen, string calldata detalle) \n    external returns (uint256 idLote) {\n        if (roles[msg.sender] != Rol.Productor) revert RolIncorrecto(Rol.Productor, roles[msg.sender]);\n\n        idLote = ++totalLotes;\n        lotes[idLote] = Lote({\n            id: idLote,\n            origen: origen,\n            productor: msg.sender,\n            custodio: msg.sender,\n            etapa: Etapa.Cosechado,\n            fechaCreacion: uint64(block.timestamp)\n        });\n\n        _registrar(idLote, Etapa.Cosechado, detalle);\n        emit LoteCreado(idLote, msg.sender, origen);\n    }\n\n    // Custodio: pasar el lote al siguiente actor para que lo custodie\n    function transferirCustodia(\n        uint256 idLote,\n        address nuevoCustodio\n    ) external loteExiste(idLote) soloCustodio(idLote) {\n        Lote storage lote = lotes[idLote];\n        if (lote.etapa == Etapa.Distribuido) revert LoteFinalizado(idLote);\n\n        // El receptor debe tener el rol de la siguiente etapa\n        Rol requerido = rolParaEtapa(Etapa(uint8(lote.etapa) + 1));\n        if (roles[nuevoCustodio] != requerido) revert RolIncorrecto(requerido, roles[nuevoCustodio]);\n\n        emit CustodiaTransferida(idLote, msg.sender, nuevoCustodio);\n        lote.custodio = nuevoCustodio;\n    }\n\n    // Custodio: registrar la siguiente etapa \n    function avanzarEtapa(uint256 idLote, string calldata detalle) external loteExiste(idLote) soloCustodio(idLote) {\n        Lote storage lote = lotes[idLote];\n        if (lote.etapa == Etapa.Distribuido) revert LoteFinalizado(idLote);\n\n        Etapa siguiente = Etapa(uint8(lote.etapa) + 1);\n        Rol requerido = rolParaEtapa(siguiente);\n        if (roles[msg.sender] != requerido) revert RolIncorrecto(requerido, roles[msg.sender]);\n\n        lote.etapa = siguiente;\n        _registrar(idLote, siguiente, detalle);\n    }\n\n    // Obtener información de lotes y su historial \n    function obtenerLote(uint256 idLote) external view loteExiste(idLote) returns (Lote memory) {\n        return lotes[idLote];\n    }\n\n    function obtenerHistorial(uint256 idLote) external view loteExiste(idLote) returns (Registro[] memory) {\n        return historial[idLote];\n    }\n\n    function rolParaEtapa(Etapa etapa) public pure returns (Rol) {\n        // Cosechado(0)→Productor(1), Beneficiado(1)→Procesador(2), ...\n        return Rol(uint8(etapa) + 1);\n    }\n\n    //  Interno ────────────────────────────────────────────\n    function _registrar(uint256 idLote, Etapa etapa, string calldata detalle) private {\n        historial[idLote].push(\n            Registro({\n                etapa: etapa,\n                actor: msg.sender,\n                detalle: detalle,\n                fecha: uint64(block.timestamp)\n        \n            })\n        );\n        emit EtapaRegistrada(idLote, etapa, msg.sender);\n    }\n}"
+      }
+    }
+  }
+}
