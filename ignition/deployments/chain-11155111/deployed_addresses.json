@@ -1,0 +1,7 @@
+{
+  "ContadorProxyModule#ContadorV1": "0x26d1492c650Aa6C692d289030A6BE6a25Cf6e6E5",
+  "ContadorProxyModule#ContadorProxy": "0xa2ee912BbF685E534757588d7a095525194AE5A3",
+  "ContadorProxyModule#ContadorV1EnProxy": "0xa2ee912BbF685E534757588d7a095525194AE5A3",
+  "ContadorUpgradeModule#ContadorV2EnProxy": "0xa2ee912BbF685E534757588d7a095525194AE5A3",
+  "ContadorUpgradeModule#ContadorV2": "0xd5Cb8a99cE10C537870cd0413DC0D5E54C7d92F0"
+}

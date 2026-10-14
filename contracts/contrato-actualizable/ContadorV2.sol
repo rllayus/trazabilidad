@@ -49,7 +49,7 @@ contract ContadorV2 is Initializable, UUPSUpgradeable, OwnableUpgradeable {
     }
 
     function version() external pure returns (string memory) {
-        return "V2";
+        return "Ricardo Laredo";
     }
 
     function _authorizeUpgrade(address) internal override onlyOwner {}

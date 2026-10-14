@@ -1,0 +1,52 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_34-34cdd0314c07347033a872a1eae02fad90bda733",
+  "solcVersion": "0.8.34",
+  "solcLongVersion": "0.8.34+commit.80d5c536",
+  "compilerType": "solc",
+  "toolVersions": {
+    "hardhat": "3.17.0"
+  },
+  "userSourceNameMap": {
+    "contracts/TiendaCafe.sol": "project/contracts/TiendaCafe.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "osaka",
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode.linkReferences",
+            "evm.bytecode.object",
+            "evm.bytecode.opcodes",
+            "evm.bytecode.sourceMap",
+            "evm.deployedBytecode.immutableReferences",
+            "evm.deployedBytecode.linkReferences",
+            "evm.deployedBytecode.object",
+            "evm.deployedBytecode.opcodes",
+            "evm.deployedBytecode.sourceMap",
+            "evm.methodIdentifiers"
+          ]
+        }
+      },
+      "remappings": []
+    },
+    "sources": {
+      "project/contracts/oraculo/AggregatorV3Interface.sol": {
+        "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.28;\n\ninterface AggregatorV3Interface {\n    function decimals() external view returns (uint8);\n    function description() external view returns (string memory);\n    function latestRoundData()\n        external\n        view\n        returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound);\n}"
+      },
+      "project/contracts/TiendaCafe.sol": {
+        "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.28;\n\nimport {AggregatorV3Interface} from \"./oraculo/AggregatorV3Interface.sol\";\n\ncontract TiendaCafe {\n    AggregatorV3Interface public immutable oraculo;\n    address public immutable admin;\n\n    uint256 public constant PRECIO_BOLSA_USD = 10e18;    // 10 USD\n    uint256 public constant ANTIGUEDAD_MAXIMA = 3 hours;\n\n    mapping(address => uint256) public bolsasCompradas;\n\n    event Compra(address indexed comprador, uint256 bolsas, uint256 pagadoWei, int256 precioEthUsd);\n\n    error PrecioInvalido();\n    error PrecioDesactualizado(uint256 actualizadoHace);\n    error PagoInsuficiente(uint256 requerido, uint256 enviado);\n    error NoEsAdmin();\n    error TransferenciaFallida();\n\n    constructor(address direccionOraculo) {\n        oraculo = AggregatorV3Interface(direccionOraculo);\n        admin = msg.sender;\n    }\n\n    function precioEthUsd() public view returns (int256) {\n        (, int256 precio,, uint256 actualizado,) = oraculo.latestRoundData();\n        if (precio <= 0) revert PrecioInvalido();\n        if (block.timestamp - actualizado > ANTIGUEDAD_MAXIMA) {\n            revert PrecioDesactualizado(block.timestamp - actualizado);\n        }\n        return precio;\n    }\n\n    function costoBolsaEnWei() public view returns (uint256) {\n        return (PRECIO_BOLSA_USD * 1e8) / uint256(precioEthUsd());\n    }\n\n    function comprar(uint256 cantidad) external payable {\n        uint256 costo = costoBolsaEnWei() * cantidad;\n        if (msg.value < costo) revert PagoInsuficiente(costo, msg.value);\n\n        bolsasCompradas[msg.sender] += cantidad;\n        emit Compra(msg.sender, cantidad, costo, precioEthUsd());\n\n        uint256 vuelto = msg.value - costo;\n        if (vuelto > 0) {\n            (bool ok,) = msg.sender.call{value: vuelto}(\"\");\n            if (!ok) revert TransferenciaFallida();\n        }\n    }\n\n    function retirar() external {\n        if (msg.sender != admin) revert NoEsAdmin();\n        (bool ok,) = admin.call{value: address(this).balance}(\"\");\n        if (!ok) revert TransferenciaFallida();\n    }\n}"
+      }
+    }
+  }
+}
