@@ -1,0 +1,52 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_34-83e7823519d1cf0be3b173499e2b5d0317f0ac35",
+  "solcVersion": "0.8.34",
+  "solcLongVersion": "0.8.34+commit.80d5c536",
+  "compilerType": "solc",
+  "toolVersions": {
+    "hardhat": "3.17.0"
+  },
+  "userSourceNameMap": {
+    "contracts/oraculo/TemperaturaOraculo.sol": "project/contracts/oraculo/TemperaturaOraculo.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "osaka",
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode.linkReferences",
+            "evm.bytecode.object",
+            "evm.bytecode.opcodes",
+            "evm.bytecode.sourceMap",
+            "evm.deployedBytecode.immutableReferences",
+            "evm.deployedBytecode.linkReferences",
+            "evm.deployedBytecode.object",
+            "evm.deployedBytecode.opcodes",
+            "evm.deployedBytecode.sourceMap",
+            "evm.methodIdentifiers"
+          ]
+        }
+      },
+      "remappings": []
+    },
+    "sources": {
+      "project/contracts/oraculo/TemperaturaInterface.sol": {
+        "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.28;\n\ninterface TemperaturaInterface {\n    function temperaturaActual() external view returns (int256 decimasGrado, uint256 actualizado);\n}"
+      },
+      "project/contracts/oraculo/TemperaturaOraculo.sol": {
+        "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.28;\n\nimport {TemperaturaInterface} from \"./TemperaturaInterface.sol\";\n\ncontract TemperaturaOraculo is TemperaturaInterface {\n    address public admin;\n    int256 private temperatura;   // la temperatura en décimas de grado Celsius (por ejemplo, 215 = 21,5 °C)\n    uint256 private actualizado;  // fecha y hora de la actualización en formato timestamp\n\n    int256 public constant MINIMO = -900; // -90,0 °C\n    int256 public constant MAXIMO = 600;  //  60,0 °C\n\n    event TemperaturaActualizada(int256 decimasGrado, uint256 actualizado);\n    event AdminCambiado(address anterior, address nuevo);\n\n    error NoEsAdmin();\n    error FueraDeRango(int256 valor);\n    error SinDatos();\n\n    modifier soloAdmin() {\n        if (msg.sender != admin) revert NoEsAdmin();\n        _;\n    }\n\n    constructor() {\n        admin = msg.sender;\n        temperatura = 200;\n        actualizado = block.timestamp;\n    }\n\n    function actualizarTemperatura(int256 decimasGrado) external soloAdmin {\n        if (decimasGrado < MINIMO || decimasGrado > MAXIMO) revert FueraDeRango(decimasGrado);\n        temperatura = decimasGrado;\n        actualizado = block.timestamp;\n        emit TemperaturaActualizada(decimasGrado, block.timestamp);\n    }\n\n    function temperaturaActual() external view override returns (int256, uint256) {\n        if (actualizado == 0) revert SinDatos();\n        return (temperatura, actualizado);\n    }\n}"
+      }
+    }
+  }
+}

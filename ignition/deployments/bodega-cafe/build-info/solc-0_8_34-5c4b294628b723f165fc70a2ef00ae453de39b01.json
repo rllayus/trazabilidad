@@ -1,0 +1,52 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_34-5c4b294628b723f165fc70a2ef00ae453de39b01",
+  "solcVersion": "0.8.34",
+  "solcLongVersion": "0.8.34+commit.80d5c536",
+  "compilerType": "solc",
+  "toolVersions": {
+    "hardhat": "3.17.0"
+  },
+  "userSourceNameMap": {
+    "contracts/oraculo/BodegaCafe.sol": "project/contracts/oraculo/BodegaCafe.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "osaka",
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode.linkReferences",
+            "evm.bytecode.object",
+            "evm.bytecode.opcodes",
+            "evm.bytecode.sourceMap",
+            "evm.deployedBytecode.immutableReferences",
+            "evm.deployedBytecode.linkReferences",
+            "evm.deployedBytecode.object",
+            "evm.deployedBytecode.opcodes",
+            "evm.deployedBytecode.sourceMap",
+            "evm.methodIdentifiers"
+          ]
+        }
+      },
+      "remappings": []
+    },
+    "sources": {
+      "project/contracts/oraculo/BodegaCafe.sol": {
+        "content": "//SPDX-License-Identifier: MIT\npragma solidity ^0.8.28;\n\nimport {TemperaturaInterface} from \"./TemperaturaInterface.sol\";\n\ncontract BodegaCafe {\n    TemperaturaInterface public oraculo;\n\n    constructor(address _oraculo) {\n        oraculo = TemperaturaInterface(_oraculo);\n    }\n\n     function estado() external view returns (string memory) {\n         (int256 temperatura,) = oraculo.temperaturaActual();\n\n        if (temperatura > 250) return \"Muy caliente: el cafe se deteriora\";\n        if (temperatura < 100  ) return \"Muy frio: riesgo de humedad\";\n        return \"Temperatura ideal\";\n    }\n}"
+      },
+      "project/contracts/oraculo/TemperaturaInterface.sol": {
+        "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.28;\n\ninterface TemperaturaInterface {\n    function temperaturaActual() external view returns (int256 decimasGrado, uint256 actualizado);\n}"
+      }
+    }
+  }
+}
