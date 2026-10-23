@@ -2,7 +2,7 @@ import { network } from "hardhat";
 
 const DIRECCION_ORACULO = "0x4b046Db3FB5800114281F5d6b9DfD7F1293B6A62";  
 
-const TEMPERATURA =  100n;
+const TEMPERATURA =  300n;
 
 const { viem } = await network.connect();
 const publicClient = await viem.getPublicClient();

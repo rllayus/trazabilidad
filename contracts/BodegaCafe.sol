@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {TemperaturaInterface} from "./TemperaturaInterface.sol";
+import {TemperaturaInterface} from "./oraculo/TemperaturaInterface.sol";
 
 contract BodegaCafe {
     TemperaturaInterface public oraculo;
